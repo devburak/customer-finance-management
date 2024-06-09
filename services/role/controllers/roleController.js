@@ -1,3 +1,4 @@
+const permissions = require('../../../config/permissions');
 const roleService = require('../services/roleService');
 
 exports.getAllRoles = async (req, res) => {
@@ -52,4 +53,8 @@ exports.getRoleByName = async (req, res) => {
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
+};
+
+exports.getPermissions = (req, res) => {
+  res.json({ permissions });
 };

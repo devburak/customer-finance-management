@@ -2,11 +2,11 @@ const express = require('express');
 const router = express.Router();
 const logController = require('../controllers/logController');
 const authMiddleware = require('../../user/middlewares/authMiddleware');
-const { isAdmin } = require('../../../middlewares/roleMiddleware');
+const checkPermission = require('../../../middlewares/permissionMiddleware');
 
-router.get('/', authMiddleware, isAdmin, logController.getAllLogs);
-router.get('/filter', authMiddleware, isAdmin, logController.filterLogs);
-router.delete('/:id', authMiddleware, isAdmin, logController.deleteLogById); // ID'ye göre silme
-router.delete('/', authMiddleware, isAdmin, logController.deleteLogs); // Toplu silme
+router.get('/', authMiddleware, checkPermission('readLogs'), logController.getAllLogs);
+router.get('/filter', authMiddleware, checkPermission('readLogs'), logController.filterLogs);
+router.delete('/:id', authMiddleware, checkPermission('deleteLog'), logController.deleteLogById); 
+router.delete('/', authMiddleware, checkPermission('deleteLog'), logController.deleteLogs); 
 
 module.exports = router;

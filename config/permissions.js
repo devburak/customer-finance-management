@@ -5,7 +5,14 @@ const permissions = [
     'deleteUser',
     'createMember',
     'updateMember',
-    'deleteMember'
+    'deleteMember',
+    'readRoles',
+    'createRole',
+    'updateRole',
+    'deleteRole',
+    'flushCache',
+    'readLogs',
+    'deleteLog'
   ];
   
   module.exports = permissions;
