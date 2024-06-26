@@ -1,19 +1,23 @@
-const Role = require('../services/role/models/roleModel');
+const User = require('../services/user/models/userModel');
 
 const checkPermission = (requiredPermission) => {
   return async (req, res, next) => {
     try {
-      const userRole = await Role.findById(req.user.role);
-      if (!userRole) {
-        return res.status(403).json({ message: 'Role not found' });
+      const user = await User.findById(req.user.id).populate('role');
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
       }
-      if (userRole.permissions.includes(requiredPermission)) {
+
+      const { role } = user;
+
+      // SuperAdmin kontrolü
+      if (role.isSuperAdmin || role.permissions.includes(requiredPermission)) {
         return next();
-      } else {
-        return res.status(403).json({ message: 'Forbidden: You do not have the required permissions' });
       }
+
+      return res.status(403).json({ message: 'Permission denied' });
     } catch (error) {
-      return res.status(500).json({ message: 'Internal Server Error' });
+      return res.status(500).json({ message: 'Internal server error' });
     }
   };
 };

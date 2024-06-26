@@ -9,7 +9,8 @@ const cacheRoutes = require('./services/cache/routes/cacheRoutes');
 const rateLimit = require('express-rate-limit');
 const { isAdmin, isAdminOrSelf } = require('./middlewares/roleMiddleware');
 const logger = require('./utils/logger');
-
+const customerService = require('./services/customer');
+const transactionService = require('./services/transaction');
 // const requestLogger = require('./middlewares/requestLogger');
 const logMiddleware = require('./middlewares/logMiddleware');
 
@@ -43,6 +44,8 @@ app.use('/api', userService);
 app.use('/api', roleService);
 app.use('/api', logService); // Log servisini ekleyin
 app.use('/api', cacheRoutes);
+app.use('/api', customerService);
+app.use('/api', transactionService);
 
 // Protected route example
 app.get('/api/protected', authMiddleware, isAdmin, (req, res) => {

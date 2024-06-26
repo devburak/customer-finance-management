@@ -25,7 +25,7 @@ const customerSchema = new mongoose.Schema({
   contact: contactSchema, // İletişim bilgileri
   responsiblePerson: responsiblePersonSchema, // Sorumlu kişi bilgileri
   type: { type: String, enum: ['satıcı', 'alıcı', 'işçi', 'toptancı'], required: false }, // Tip: satıcı, alıcı, işçi, toptancı
-  status: { type: String, enum: ['aktif', 'pasif'], default: 'active' }, 
+  status: { type: String, enum: ['aktif', 'pasif'], default: 'aktif' }, 
   notes: { type: String, required: false }, 
 }, { timestamps: true });
 

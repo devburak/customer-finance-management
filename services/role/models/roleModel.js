@@ -15,6 +15,10 @@ const roleSchema = new Schema({
     type: [String],
     required: true,
     default:['read']
+  },
+  isSuperAdmin: { // Yeni alan eklendi
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true
