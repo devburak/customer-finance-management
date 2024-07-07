@@ -2,6 +2,7 @@ const UserRepository = require('../repositories/userRepository');
 const RoleRepository = require('../../role/repositories/roleRepository');
 const LogRepository = require('../../log/repositories/logRepository');
 const cacheService = require('../../cache/services/cacheService');
+const User = require('../models/userModel');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
@@ -12,9 +13,42 @@ const userRepository = new UserRepository();
 const roleRepository = new RoleRepository();
 const logRepository = new LogRepository();
 
-const getAllUsers = async () => {
-    return await userRepository.getAllUsers();
-};
+// Tüm kullanıcıları getirme (filtreleme, sıralama, limit ve sayfalama ile)
+const getUsers = async (filters, options) => {
+    const { sortField, sortOrder, limit, page, globalFilter } = options;
+    const query = {};
+  
+    // Global filter için OR sorgusu
+    if (globalFilter) {
+      query.$or = [
+        { username: { $regex: globalFilter, $options: 'i' } },
+        { email: { $regex: globalFilter, $options: 'i' } },
+        { role: { $regex: globalFilter, $options: 'i' } }
+      ];
+    }
+  
+    // Diğer filtreleri ekle
+    Object.assign(query, filters);
+  
+    const userQuery = User.find(query);
+  
+    if (sortField && sortOrder) {
+      const sort = {};
+      sort[sortField] = sortOrder === 'desc' ? -1 : 1;
+      userQuery.sort(sort);
+    }
+  
+    if (limit) {
+      const pageNumber = page || 1;
+      userQuery.skip((pageNumber - 1) * limit).limit(limit);
+    }
+  
+    const users = await userQuery.exec();
+    const total = await User.countDocuments(query);
+  
+    return { users, total, page: page || 1, limit };
+  };
+  
 
 const getUserById = async (id) => {
     let user = cacheService.getCache(`user_${id}`);
@@ -155,7 +189,7 @@ const deleteUser = async (id) => {
   };
 
 module.exports = {
-    getAllUsers,
+    getUsers,
     getUserById,
     createUser,
     updateUser,

@@ -8,7 +8,7 @@ const checkPermission = require('../../../middlewares/permissionMiddleware');
 router.post('/login', userController.authenticate);
 router.post('/refresh-token', userController.refreshToken);
 
-router.get('/', authMiddleware, checkPermission('readUsers'), userController.getAllUsers);
+router.get('/', authMiddleware, checkPermission('readUsers'), userController.getUsers);
 router.get('/:id', authMiddleware, checkPermission('readUser'), userController.getUserById);
 router.post('/', authMiddleware, checkPermission('createUser'), userController.createUser);
 router.put('/:id', authMiddleware, checkPermission('updateUser'), userController.updateUser);

@@ -2,6 +2,6 @@ const express = require('express');
 const customerRoutes = require('./routes/customerRoutes');
 
 const customerService = express();
-customerService.use('/customer', customerRoutes);
+customerService.use('/customers', customerRoutes);
 
 module.exports = customerService;

@@ -30,12 +30,21 @@ exports.getCustomerById = async (req, res) => {
   }
 };
 
-// Tüm müşterileri getirme (filtreleme ile)
+// Tüm müşterileri getirme (filtreleme, sıralama, limit ve sayfalama ile)
 exports.getAllCustomers = async (req, res) => {
   try {
-    const filters = req.query;
-    const customers = await customerService.getCustomers(filters);
-    res.json(customers);
+    const { globalFilter, sortField, sortOrder, limit, page, ...filters } = req.query;
+
+    const options = {
+      sortField,
+      sortOrder,
+      limit: parseInt(limit),
+      page: parseInt(page),
+      globalFilter
+    };
+
+    const { customers, total, page: currentPage, limit: currentLimit } = await customerService.getCustomers(filters, options);
+    res.status(200).json({ customers, total, page: currentPage, limit: currentLimit });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -46,6 +55,17 @@ exports.deleteCustomer = async (req, res) => {
   try {
     await customerService.deleteCustomer(req.params.id);
     res.status(204).send();
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+// Belirli bir müşteri için finansal ve stok işlemlerinin özetini getirme
+exports.getCustomerSummary = async (req, res) => {
+  try {
+    const customerId = req.params.customerId;
+    const summary = await customerService.getCustomerSummary(customerId);
+    res.status(200).json(summary);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }

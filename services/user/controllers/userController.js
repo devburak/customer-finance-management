@@ -2,10 +2,21 @@ const userService = require('../services/userService');
 const authService = require('../services/authService');
 const Token = require('../models/tokenModel');
 
-exports.getAllUsers = async (req, res) => {
+// Tüm kullanıcıları getirme (filtreleme, sıralama, limit ve sayfalama ile)
+exports.getUsers = async (req, res) => {
   try {
-    const users = await userService.getAllUsers();
-    res.json(users);
+    const { globalFilter, sortField, sortOrder, limit, page, ...filters } = req.query;
+
+    const options = {
+      sortField,
+      sortOrder,
+      limit: parseInt(limit),
+      page: parseInt(page),
+      globalFilter
+    };
+
+    const { users, total, page: currentPage, limit: currentLimit } = await userService.getUsers(filters, options);
+    res.status(200).json({ users, total, page: currentPage, limit: currentLimit });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
