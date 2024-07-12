@@ -70,54 +70,54 @@ const deleteCustomer = async (id) => {
 // Belirli bir müşteri için finansal ve stok işlemlerinin özetini getirme
 const getCustomerSummary = async (customerId) => {
   // Finansal özet
-  const financialTransactions = await Transaction.find({ customer: customerId });
-  const totalReceivables = financialTransactions.filter(tx => tx.type === 'alacak').reduce((acc, tx) => acc + tx.amount, 0);
-  const totalPayables = financialTransactions.filter(tx => tx.type === 'borç').reduce((acc, tx) => acc + tx.amount, 0);
+  const financialTransactions = await Transaction.find({ customer: new mongoose.Types.ObjectId(customerId) });
+  const totalReceivables = financialTransactions.reduce((acc, tx) => acc + (tx.receivable || 0), 0);
+  const totalPayables = financialTransactions.reduce((acc, tx) => acc + (tx.payable || 0), 0);
   const balance = totalReceivables - totalPayables;
 
   // Stok özet
-  const stockTransactions = await StockTransaction.find({ customer: customerId });
-  const totalProductsSold = stockTransactions.filter(tx => tx.type === 'sale').reduce((acc, tx) => acc + tx.quantity, 0);
-  const totalProductsPurchased = stockTransactions.filter(tx => tx.type === 'purchase').reduce((acc, tx) => acc + tx.quantity, 0);
+  const stockTransactions = await StockTransaction.find({ customer: new mongoose.Types.ObjectId(customerId) });
+  const totalProductsSold = stockTransactions.reduce((acc, tx) => acc + (tx.type === 'sale' ? tx.quantity : 0), 0);
+  const totalProductsPurchased = stockTransactions.reduce((acc, tx) => acc + (tx.type === 'purchase' ? tx.quantity : 0), 0);
 
- // Son 6 aylık borç alacak, alınan ve satılan ürün bilgileri
- const sixMonthsAgo = new Date();
- sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
- sixMonthsAgo.setHours(0, 0, 0, 0); // Günü başlatın
+  // Son 6 aylık borç alacak, alınan ve satılan ürün bilgileri
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+  sixMonthsAgo.setHours(0, 0, 0, 0); // Günü başlatın
 
- const monthlyFinancialSummary = await Transaction.aggregate([
-  {
-    $match: {
-      customer: new mongoose.Types.ObjectId(customerId),
-      date: { $gte: sixMonthsAgo }
-    }
-  },
-  {
-    $group: {
-      _id: { month: { $month: "$date" }, year: { $year: "$date" } },
-      totalReceivables: { $sum: { $cond: [{ $eq: ["$type", "alacak"] }, "$amount", 0] } },
-      totalPayables: { $sum: { $cond: [{ $eq: ["$type", "borç"] }, "$amount", 0] } }
-    }
-  },
-  { $sort: { "_id.year": 1, "_id.month": 1 } }
-]);
+  const monthlyFinancialSummary = await Transaction.aggregate([
+    {
+      $match: {
+        customer: new mongoose.Types.ObjectId(customerId),
+        date: { $gte: sixMonthsAgo }
+      }
+    },
+    {
+      $group: {
+        _id: { month: { $month: "$date" }, year: { $year: "$date" } },
+        totalReceivables: { $sum: "$receivable" },
+        totalPayables: { $sum: "$payable" }
+      }
+    },
+    { $sort: { "_id.year": 1, "_id.month": 1 } }
+  ]);
 
-const monthlyStockSummary = await StockTransaction.aggregate([
-  {
-    $match: {
-      customer: new mongoose.Types.ObjectId(customerId),
-      date: { $gte: sixMonthsAgo }
-    }
-  },
-  {
-    $group: {
-      _id: { month: { $month: "$date" }, year: { $year: "$date" } },
-      totalProductsSold: { $sum: { $cond: [{ $eq: ["$type", "sale"] }, "$quantity", 0] } },
-      totalProductsPurchased: { $sum: { $cond: [{ $eq: ["$type", "purchase"] }, "$quantity", 0] } }
-    }
-  },
-  { $sort: { "_id.year": 1, "_id.month": 1 } }
-]);
+  const monthlyStockSummary = await StockTransaction.aggregate([
+    {
+      $match: {
+        customer: new mongoose.Types.ObjectId(customerId),
+        date: { $gte: sixMonthsAgo }
+      }
+    },
+    {
+      $group: {
+        _id: { month: { $month: "$date" }, year: { $year: "$date" } },
+        totalProductsSold: { $sum: { $cond: [{ $eq: ["$type", "sale"] }, "$quantity", 0] } },
+        totalProductsPurchased: { $sum: { $cond: [{ $eq: ["$type", "purchase"] }, "$quantity", 0] } }
+      }
+    },
+    { $sort: { "_id.year": 1, "_id.month": 1 } }
+  ]);
 
   return {
     totalReceivables,
@@ -129,7 +129,6 @@ const monthlyStockSummary = await StockTransaction.aggregate([
     monthlyStockSummary
   };
 };
-
 
 module.exports = {
   createCustomer,
