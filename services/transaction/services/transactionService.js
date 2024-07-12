@@ -1,26 +1,11 @@
 const Transaction = require('../models/transactionModel');
 const Customer = require('../../customer/models/customerModel');
 
-const createTransaction = async (transactionData) => {
-  // Önceki tüm işlemleri al
-  const customerTransactions = await Transaction.find({ customer: transactionData.customer });
-
-  // Yeni işlemle birlikte güncel bakiyeyi hesapla
-  const balanceAfterTransaction = customerTransactions.reduce((acc, curr) => {
-    return curr.type === 'alacak' ? acc + curr.amount : acc - curr.amount;
-  }, 0) + (transactionData.type === 'alacak' ? transactionData.amount : -transactionData.amount);
-
-  // Yeni işlemi oluştur ve kaydet
-  const transaction = new Transaction({ ...transactionData, balanceAfterTransaction });
-  await transaction.save();
-
-  return { ...transaction.toObject(), balanceAfterTransaction };
-};
 
 
-// Tüm işlemleri getirme (sıralama, limit ve sayfalama ile)
+// Diğer işlemler
 const getTransactions = async (filters, options) => {
-  const { sortField, sortOrder, limit, page, globalFilter } = options;
+  const { sortField="createdAt", sortOrder, limit, page, globalFilter } = options;
   const query = {};
 
   // Global filter için OR sorgusu
@@ -28,7 +13,6 @@ const getTransactions = async (filters, options) => {
     query.$or = [
       { paymentMethod: { $regex: globalFilter, $options: 'i' } },
       { category: { $regex: globalFilter, $options: 'i' } },
-      { type: { $regex: globalFilter, $options: 'i' } },
       { description: { $regex: globalFilter, $options: 'i' } }
     ];
   }
@@ -55,33 +39,39 @@ const getTransactions = async (filters, options) => {
   return { transactions, total, page: page || 1, limit };
 };
 
-
 // ID ile işlem getirme
 const getTransactionById = async (id) => {
   return await Transaction.findById(id).populate('customer');
 };
 
+// Yeni işlem oluşturma
+const createTransaction = async (transactionData) => {
+  const transaction = new Transaction(transactionData);
+  await transaction.save();
+  return transaction;
+};
+
 // İşlem güncelleme
 const updateTransaction = async (id, transactionData) => {
-  return await Transaction.findByIdAndUpdate(id, transactionData, { new: true });
+  const transaction = await Transaction.findByIdAndUpdate(id, transactionData, { new: true });
+  return transaction;
 };
 
 // İşlem silme
 const deleteTransaction = async (id) => {
   return await Transaction.findByIdAndDelete(id);
 };
-
 // Müşteri bakiyesini hesaplama
 const getCustomerBalance = async (customerId) => {
-  const customerTransactions = await Transaction.find({ customer: customerId });
-  const balance = customerTransactions.reduce((acc, curr) => {
-    return curr.type === 'alacak' ? acc + curr.amount : acc - curr.amount;
+  const transactions = await Transaction.find({ customer: customerId });
+  const balance = transactions.reduce((acc, transaction) => {
+    const receivable = transaction.receivable || 0;
+    const payable = transaction.payable || 0;
+    return acc + receivable - payable;
   }, 0);
-  
   return balance;
 };
 
-// Son 6 aya ait toplam alacak ve borç bilgilerini getirme
 const getMonthlyTotals = async () => {
   const sixMonthsAgo = new Date();
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
@@ -98,15 +88,11 @@ const getMonthlyTotals = async () => {
           month: { $month: "$date" },
           year: { $year: "$date" }
         },
-        totalAlacak: {
-          $sum: {
-            $cond: [{ $eq: ["$type", "alacak"] }, "$amount", 0]
-          }
+        totalReceivable: {
+          $sum: "$receivable"
         },
-        totalBorc: {
-          $sum: {
-            $cond: [{ $eq: ["$type", "borç"] }, "$amount", 0]
-          }
+        totalPayable: {
+          $sum: "$payable"
         }
       }
     },
@@ -117,8 +103,8 @@ const getMonthlyTotals = async () => {
 
   const result = transactions.map(t => ({
     month: `${t._id.year}-${t._id.month}`,
-    alacak: t.totalAlacak,
-    borç: t.totalBorc
+    receivable: t.totalReceivable || 0,
+    payable: t.totalPayable || 0
   }));
 
   return result;
